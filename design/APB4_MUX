@@ -1,0 +1,27 @@
+    `timescale 1ns / 1ps
+    module APB4_MUX(MST_PSEL, MST_READY, MST_PRDATA, SLV_PSEL1, SLV_PREADY1, SLV_PRDATA1, SLV_PSEL2, SLV_PREADY2, SLV_PRDATA2, PADDR_sel);
+    
+    // MASTER-MUX ports
+    input MST_PSEL;
+    output MST_READY;
+    output [7:0]MST_PRDATA;
+    input PADDR_sel;
+    
+    // MUX-SLAVE 1 ports
+    output SLV_PSEL1;
+    input SLV_PREADY1;
+    input [7:0]SLV_PRDATA1;
+    
+    // MUX-SLAVE 2 ports
+    output SLV_PSEL2;
+    input SLV_PREADY2;
+    input [7:0]SLV_PRDATA2;
+    
+    
+    assign {SLV_PSEL1, SLV_PSEL2} = (MST_PSEL)? ((PADDR_sel)?2'b01: 2'b10) : 2'd0;
+    assign MST_READY = (PADDR_sel)?SLV_PREADY2:SLV_PREADY1;
+    assign MST_PRDATA = (PADDR_sel)?SLV_PRDATA2:SLV_PRDATA1;
+    
+    
+    
+    endmodule
