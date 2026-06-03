@@ -1,0 +1,90 @@
+`timescale 1ns / 1ps
+module APB_MASTER(PCLK, PRESETn, transfer, READ_WRITE, apb_write_paddr, apb_write_data, apb_read_paddr, apb_read_data_out, PENABLE, PSEL, PWRITE, PWDATA, PADDR, PREADY, PRDATA, PADDR_sel, PSLAVERR );
+
+//APB top module ports 
+input PCLK, PRESETn, transfer, READ_WRITE;
+input [7:0]apb_write_data;
+input [8:0]apb_write_paddr, apb_read_paddr;
+output reg [7:0]apb_read_data_out;
+
+// MASTER-SLAVE ports
+input PREADY, PSLAVERR;
+input [7:0]PRDATA;
+output reg PENABLE, PSEL, PWRITE;
+output reg [7:0]PWDATA, PADDR;
+output reg PADDR_sel;
+
+reg [1:0]states;    
+localparam IDLE = 2'b0, SETUP = 2'd1, ACCESS = 2'd2;
+
+
+always@(posedge PCLK)begin 
+    if(!PRESETn)begin 
+        PENABLE <= 1'b0;
+        PSEL <= 1'b0;
+        PWRITE <= 1'b0;
+        PWDATA <= 8'd0;
+        PADDR  <= 8'd0;
+        apb_read_data_out <=8'd0;
+        states <= IDLE;
+        PADDR_sel <= 1'b0;
+    end
+    
+    else begin 
+        case(states)
+            IDLE : begin 
+                PSEL <= 1'b0;
+                PENABLE <= 1'b0;                
+                if(transfer)begin 
+                    PSEL <= 1'b1;
+                    states <= SETUP;
+                    
+                    if(READ_WRITE)begin 
+                        PADDR <= apb_read_paddr[7:0];
+                        PWRITE <= 1'b0;
+                        PADDR_sel <= apb_read_paddr[8];
+                    end
+                   else  begin 
+                        PADDR <= apb_write_paddr[7:0];    
+                        PWRITE <= 1'b1;            
+                        PADDR_sel <= apb_write_paddr[8];
+                        PWDATA <= apb_write_data;
+                   end
+                   end
+            end
+            
+            SETUP : begin 
+                PENABLE <= 1'b1;
+               if(PSLAVERR) begin 
+                apb_read_data_out <= apb_read_data_out;
+                PWDATA <= PWDATA;
+                states <= ACCESS;
+               end 
+               else begin 
+                if(PREADY)begin                   
+               if(!PWRITE)begin 
+                    apb_read_data_out <= PRDATA;
+               end
+               else begin 
+                    PWDATA <= apb_write_data;
+               end
+                states <= ACCESS;
+            end 
+            end
+            end
+            
+            ACCESS : begin 
+                PSEL <= 1'b0;
+                PENABLE <= 1'b0;                    
+                states <= IDLE;
+               end          
+          
+          default : begin
+            states <= IDLE;
+          end
+        
+        endcase
+    end
+end
+
+endmodule
